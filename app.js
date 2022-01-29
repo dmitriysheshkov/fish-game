@@ -15,6 +15,7 @@
   let score = 0;
   let failed = 0;
   let gameFrame = 0;
+  let gameSpeed =5;
   let playerSpeed = 10; // чем больше это значение, тем медлее скорость
 
   const mouse = {
@@ -39,13 +40,22 @@
   });
 
   // Player
+  const playerLeft = new Image();
+  playerLeft.src = './sources/sprites/fish_red_swim_left.png';
+
+  const playerRight = new Image();
+  playerRight.src = './sources/sprites/fish_red_swim_right.png';
+
   class Player {
     constructor() {
       this.x = canvas.width;  // start player position for x
       this.y = canvas.height / 2; // start player position for y
       this.angle = 0; // start angle for player
       this.radius = 50;
-      this.spriteWidth = 498; // png-sprite size
+      this.frameX = 0;
+      this.frameY = 0;
+      this.frame = 0;
+      this.spriteWidth = 498;
       this.spriteHeight = 327;
     }
 
@@ -53,6 +63,9 @@
       const dx = this.x - mouse.x;
       const dy = this.y - mouse.y;
       
+      let theta = Math.atan2(dy, dx);
+      this.angle = theta;
+
       if (mouse.x != this.x) {
         this.x -= dx / playerSpeed;
       }
@@ -63,17 +76,40 @@
 
     draw() {
       if (mouse.click) {
-        ctx.linewidth = 0.2;
+        // ctx.linewidth = 0.2;
         ctx.beginPath;
         ctx.moveTo(this.x, this.y);
         ctx.lineTo(mouse.z, mouse.y);
-        ctx.stroke();
+        // ctx.stroke();
       }
       ctx.fillStyle = 'red';
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.closePath();
+      // ctx.fillRect(this.x, this.y, this.radius, 10);
+
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.angle);
+      if (this.x >= mouse.x) {
+        ctx.drawImage(
+          playerLeft,
+          this.frameX * this.spriteWidth, this.frameY * this.spriteHeight,
+          this.spriteWidth, this.spriteHeight,
+          0 - 60, 0 - 45,
+          this.spriteWidth / 4, this.spriteHeight / 4,
+        );
+      } else {
+        ctx.drawImage(
+          playerRight,
+          this.frameX * this.spriteWidth, this.frameY * this.spriteHeight,
+          this.spriteWidth, this.spriteHeight,
+          0 - 60, 0 - 35,
+          this.spriteWidth / 4, this.spriteHeight / 4,
+        );
+      }
+      ctx.restore();
     }
   }
 
@@ -81,6 +117,8 @@
 
   // Bubbles
   const bubbles = [];
+  const bubbleImege = new Image();
+  bubbleImege.src = './sources/bubble_pop_one/bubble_pop_frame_01.png';
 
   class Bubble {
     constructor() {
@@ -103,12 +141,14 @@
     }
 
     draw() {
-      ctx.fillStyle = 'blue';
+      ctx.fillStyle = 'rgba(131, 192, 211, 40%)';
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
       ctx.fill();
-      ctx.closePath();
-      ctx.stroke();
+      // ctx.closePath();
+      // ctx.stroke();
+
+      ctx.drawImage(bubbleImege, this.x - 68, this.y - 68, this.radius * 2.7, this.radius * 2.7);
     }
   }
 
@@ -123,7 +163,7 @@
     });
 
     bubbles.forEach((element, i) => { //repeated to remove flickering bubbles
-      if (element.y < 0 - element.radius / 2) {
+      if (element.y < 0 + element.radius / 2) {
         bubbles.splice(i, 1);
 
         bubblePop.src = `./sources/fail-bubble-${Math.random() <= 0.5 ? 1 : 2}.mp3`; 
@@ -132,24 +172,48 @@
         failed += 1;
       }
 
-      if (element.distance < element.radius + player.radius) {
-        if (!element.counted) {
-          
-          bubblePop.src = `./sources/bubble-${element.soundNumber}.mp3`; 
-          bubblePop.play();
-          console.log(element.soundNumber);
-
-          score++;
-          element.counted = false;
-          bubbles.splice(i, 1);
+      if (element) {
+        if (element.distance < element.radius + player.radius) {
+          if (!element.counted) {
+            
+            bubblePop.src = `./sources/bubble-${element.soundNumber}.mp3`; 
+            bubblePop.play();
+  
+            score++;
+            element.counted = false;
+            bubbles.splice(i, 1);
+          }
         }
       }
     });
   }
 
+  // Repiting BG
+  const background = new Image();
+  background.src = './sources/bg-wave.svg';
+
+  const BG = {
+    x1: 0,
+    x2: canvas.width,
+    y: 0,
+    width: canvas.width,
+    height: canvas.height
+  }
+
+  function handleBackground() {
+    BG.x1 -= gameSpeed;
+    if (BG.x1 < - BG.width) BG.x1 = BG.width;
+    BG.x2 -= gameSpeed;
+    if (BG.x2 < - BG.width) BG.x2 = BG.width;
+    ctx.drawImage(background, BG.x1, BG.y, BG.width + gameSpeed, BG.height);
+    ctx.drawImage(background, BG.x2, BG.y, BG.width + gameSpeed, BG.height);
+  }
+
   // Animation loop
   function loop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    handleBackground();
 
     handleBubbles();
     player.update();
